@@ -14,38 +14,67 @@
  * Иногда промисы от API будут приходить в состояние rejected, (прямо как и API в реальной жизни)
  * Ответ будет приходить в поле {result}
  */
- import Api from '../tools/api';
+import Api from '../tools/api';
+import { allPass, andThen, compose, curry, ifElse, prop, tap, tryCatch } from 'ramda';
 
- const api = new Api();
+const api = new Api();
 
- /**
-  * Я – пример, удали меня
-  */
- const wait = time => new Promise(resolve => {
-     setTimeout(resolve, time);
- })
+const getValue = prop('value');
+const getResult = prop('result');
 
- const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
-     /**
-      * Я – пример, удали меня
-      */
-     writeLog(value);
+const getFixed = (string) => (+string).toFixed(0);
+const getLength = (string) => string.length;
+const powerTwo = (num) => Math.pow(num, 2);
+const reminderFromDivideByThree = (num) => num % 3;
 
-     api.get('https://api.tech/numbers/base', {from: 2, to: 10, number: '01011010101'}).then(({result}) => {
-         writeLog(result);
-     });
+const isStringLessNum = (num, string) => num > string.length;
+const isStringMoreNum = (num, string) => num < string.length;
+const isNumberPositive = (num) => num > 0;
+const curriedIsStringLessNum = curry(isStringLessNum);
+const curriedIsStringMoreNum = curry(isStringMoreNum);
+const isStringLessThan10 = curriedIsStringLessNum(10);
+const isStringMoreThan2 = curriedIsStringMoreNum(2);
 
-     wait(2500).then(() => {
-         writeLog('SecondLog')
+const isStringValid = allPass([isStringLessThan10, isStringMoreThan2, isNumberPositive]);
 
-         return wait(1500);
-     }).then(() => {
-         writeLog('ThirdLog');
+const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
+  const showError = () => handleError('ValidationError');
+  const createSafeFunction = (fn) => tryCatch(fn, showError);
 
-         return wait(400);
-     }).then(() => {
-         handleSuccess('Done');
-     });
- }
+  const checkValidity = ifElse(isStringValid, getFixed, showError);
+  const checkValiditySafe = createSafeFunction(checkValidity);
 
- export default processSequence;
+  const makeQueryNumbersUrl = api.get('https://api.tech/numbers/base');
+  const fetchNumber = (num) => makeQueryNumbersUrl({from: 10, to: 2, number: num});
+  const fetchAnimal = (id) => api.get(`https://animals.tech/${id}`)({});
+
+  const makeAsyncAfterAnimalFetch = compose(
+    handleSuccess,
+    getResult
+  )
+
+  const makeAsyncAfterNumberFetch = compose(
+    andThen(makeAsyncAfterAnimalFetch),
+    fetchAnimal,
+    tap(writeLog),
+    reminderFromDivideByThree,
+    tap(writeLog),
+    powerTwo,
+    tap(writeLog),
+    getLength,
+    tap(writeLog),
+    getResult);
+
+  const app = compose(
+    andThen(makeAsyncAfterNumberFetch),
+    fetchNumber,
+    tap(writeLog),
+    checkValiditySafe,
+    tap(writeLog),
+    getValue
+  );
+
+  app({value});
+};
+
+export default processSequence;
