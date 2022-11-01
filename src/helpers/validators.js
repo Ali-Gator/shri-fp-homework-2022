@@ -63,6 +63,7 @@ const isCircleBlue = compose(isBlue, getCircleColor);
 const isEqualsOne = equals(1);
 const isEqualsTwo = equals(2);
 const isEqualsFour = equals(4);
+const greaterThanOne = (value) => value > 1;
 
 /**
  * Вспомогательные функции
@@ -93,7 +94,7 @@ export const validateFieldN1 = allPass([isStarRed, isSquareGreen, isTriangleWhit
 
 
 // 2. Как минимум две фигуры зеленые.
-export const validateFieldN2 = compose(isEqualsTwo, length, filter(isGreen), getColors);
+export const validateFieldN2 = compose(greaterThanOne, length, filter(isGreen), getColors);
 
 // 3. Количество красных фигур равно кол-ву синих.
 export const validateFieldN3 = compose(isArrayElementsSameAndNonZero, getQuantityRedAndBlueShapes);
